@@ -16,6 +16,7 @@ function item(
     unitSize,
     unitOfMeasure,
     packWeightKg: unitOfMeasure === "box" ? 1 : unitSize,
+    contentsPerPack: null,
     perishable,
     consumptionDays,
   };
@@ -97,6 +98,7 @@ const prices: PriceCapture[] = sheetPrices.map(([itemId, price]) => {
     price,
     unitSize: menuItem.unitSize,
     unitOfMeasure: menuItem.unitOfMeasure,
+    contentsPerPack: null,
     notes: "Taken from the October planning sheet.",
     capturedOn: "2026-10-01",
   };

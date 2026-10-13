@@ -16,6 +16,8 @@ export interface MenuItem {
   name: string;
   unitSize: number;
   unitOfMeasure: PurchaseUom;
+  /** How many portion units are inside one pack, such as fruit in one box. Null when the pack size already converts, for example kilograms to grams. */
+  contentsPerPack: number | null;
   packWeightKg: number;
   perishable: boolean;
   consumptionDays: Weekday[];
@@ -56,6 +58,8 @@ export interface PriceCapture {
   price: number;
   unitSize: number;
   unitOfMeasure: PurchaseUom;
+  /** Overrides the menu when this supplier's pack holds a different amount. */
+  contentsPerPack: number | null;
   notes: string;
   capturedOn: string;
 }
@@ -88,6 +92,9 @@ export interface OrderLineSnapshot {
   totalDays: number;
   requiredQty: number;
   quantityInUnit: number;
+  contentsPerPack: number | null;
+  learnersPerPack: number | null;
+  contentsMissing: boolean;
   packsToBuy: number;
   lineCost: number;
 }

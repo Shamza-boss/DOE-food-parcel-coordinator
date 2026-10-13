@@ -24,6 +24,7 @@ export default function PricesPage() {
   const [itemId, setItemId] = useState(state.items[0]?.id ?? "");
   const [price, setPrice] = useState("");
   const [unitSize, setUnitSize] = useState(String(state.items[0]?.unitSize ?? 1));
+  const [contents, setContents] = useState(state.items[0]?.contentsPerPack != null ? String(state.items[0].contentsPerPack) : "");
   const [notes, setNotes] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const selectedItem = state.items.find((item) => item.id === itemId);
@@ -33,7 +34,7 @@ export default function PricesPage() {
     <>
       <PageHeader
         title="Supplier prices"
-        subtitle="Capture the price, pack size, and a note. The date is today. The cheapest current price per purchase unit is used unless you choose another quote."
+        subtitle="Capture the price, the pack size, and how much is inside that pack when it is not obvious from the unit. A box of fruit needs the number of fruit in the box. The date is today."
       />
       {!editable ? <Alert severity="info" sx={{ mb: 2 }}>Viewing only. The price capturer records quotes.</Alert> : null}
       {notice ? <Alert severity="success" sx={{ mb: 2 }}>{notice}</Alert> : null}
@@ -46,12 +47,22 @@ export default function PricesPage() {
           <TextField select label="Item" value={itemId} disabled={!editable} onChange={(event) => {
             setItemId(event.target.value);
             const item = state.items.find((entry) => entry.id === event.target.value);
-            if (item) setUnitSize(String(item.unitSize));
+            if (item) {
+              setUnitSize(String(item.unitSize));
+              setContents(item.contentsPerPack != null ? String(item.contentsPerPack) : "");
+            }
           }}>
             {state.items.map((item) => <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>)}
           </TextField>
           <TextField label="Price (R)" value={price} disabled={!editable} onChange={(event) => setPrice(event.target.value)} />
           <TextField label="Pack size" value={unitSize} disabled={!editable} onChange={(event) => setUnitSize(event.target.value)} />
+          <TextField
+            label={selectedItem?.unitOfMeasure === "box" ? "Pieces in the pack" : "Amount in the pack"}
+            value={contents}
+            disabled={!editable}
+            placeholder="From pack size"
+            onChange={(event) => setContents(event.target.value)}
+          />
           <TextField label="Note" value={notes} disabled={!editable} onChange={(event) => setNotes(event.target.value)} />
           <Button
             variant="contained"
@@ -59,13 +70,15 @@ export default function PricesPage() {
             onClick={() => {
               const amount = Number(price);
               const size = Number(unitSize);
-              if (!supplierId || !itemId || Number.isNaN(amount) || !(size > 0)) return;
+              const contentsValue = contents.trim() === "" ? null : Number(contents);
+              if (!supplierId || !itemId || Number.isNaN(amount) || !(size > 0) || (contentsValue != null && Number.isNaN(contentsValue))) return;
               addPrice({
                 supplierId,
                 itemId,
                 price: amount,
                 unitSize: size,
                 unitOfMeasure: selectedItem?.unitOfMeasure ?? "kg",
+                contentsPerPack: contentsValue,
                 notes: notes.trim(),
               });
               setPrice("");
@@ -153,7 +166,7 @@ function BoxLine({
   quote,
 }: {
   name: string;
-  quote: { price: number; unitSize: number; unitOfMeasure: PurchaseUom; capturedOn: string; notes: string };
+  quote: { price: number; unitSize: number; unitOfMeasure: PurchaseUom; contentsPerPack: number | null; capturedOn: string; notes: string };
 }) {
   return (
     <div>
@@ -161,7 +174,9 @@ function BoxLine({
         {name} · {formatZar(quote.price)} / {formatNumber(quote.unitSize, 2)} {quote.unitOfMeasure} · {formatZar(pricePerBaseUnit(quote))} per {quote.unitOfMeasure}
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        {formatDate(quote.capturedOn)}{quote.notes ? ` · ${quote.notes}` : ""}
+        {formatDate(quote.capturedOn)}
+        {quote.contentsPerPack != null ? ` · ${formatNumber(quote.contentsPerPack, 2)} inside` : ""}
+        {quote.notes ? ` · ${quote.notes}` : ""}
       </Typography>
     </div>
   );

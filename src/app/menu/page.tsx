@@ -21,6 +21,8 @@ import Typography from "@mui/material/Typography";
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { WEEKDAY_ORDER, WEEKDAY_SHORT } from "@/lib/calendar";
+import { derivedContentsPerPack, effectiveContentsPerPack, learnersServedByPack } from "@/lib/calc";
+import { formatNumber } from "@/lib/format";
 import { can, useApp } from "@/lib/store";
 import type { PortionUnit, PurchaseUom, Weekday } from "@/lib/types";
 
@@ -38,7 +40,7 @@ export default function MenuPage() {
     <>
       <PageHeader
         title="Menu and portions"
-        subtitle="The menu is the same for every school. Portion sizes belong to the school type. Fresh items are delivered on the day they are eaten."
+        subtitle="The menu is the same for every school. One each means one piece per learner. For a box, enter how many pieces are inside so the order can count boxes instead of giving every learner a box."
       />
       {!editable ? <Alert severity="info" sx={{ mb: 2 }}>Viewing only. The owner captures the menu and portions.</Alert> : null}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -51,11 +53,17 @@ export default function MenuPage() {
               <TableCell>Fresh</TableCell>
               <TableCell>Pack size</TableCell>
               <TableCell>Unit</TableCell>
+              <TableCell>In one pack</TableCell>
               <TableCell>Pack weight (kg)</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {state.items.map((item) => (
+            {state.items.map((item) => {
+              const portion = state.portions.find((entry) => entry.itemId === item.id);
+              const derived = portion
+                ? derivedContentsPerPack(portion.unit, item.unitOfMeasure, item.unitSize)
+                : null;
+              return (
               <TableRow key={item.id}>
                 <TableCell>{item.name}</TableCell>
                 <TableCell>
@@ -95,6 +103,25 @@ export default function MenuPage() {
                   <TextField
                     size="small"
                     type="number"
+                    key={`${item.id}-${item.contentsPerPack ?? "empty"}`}
+                    defaultValue={item.contentsPerPack ?? ""}
+                    placeholder={derived != null ? String(derived) : "How many"}
+                    disabled={!editable}
+                    onBlur={(event) => {
+                      const raw = event.target.value.trim();
+                      updateItem(item.id, { contentsPerPack: raw === "" ? null : Number(raw) });
+                    }}
+                    sx={{ width: 110 }}
+                  />
+                  <Typography variant="caption" display="block" color={item.unitOfMeasure === "box" && item.contentsPerPack == null ? "error.main" : "text.secondary"}>
+                    {portion ? `${portion.unit} inside` : "Set a portion first"}
+                    {derived != null && item.contentsPerPack == null ? ` · ${formatNumber(derived, 2)} from the pack size` : ""}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    size="small"
+                    type="number"
                     defaultValue={item.packWeightKg}
                     disabled={!editable}
                     onBlur={(event) => updateItem(item.id, { packWeightKg: Number(event.target.value) })}
@@ -102,7 +129,8 @@ export default function MenuPage() {
                   />
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
         {editable ? (
@@ -118,6 +146,7 @@ export default function MenuPage() {
                   unitSize: 1,
                   unitOfMeasure: "kg",
                   packWeightKg: 1,
+                  contentsPerPack: null,
                   perishable: false,
                   consumptionDays: ["mon"],
                 });
@@ -151,6 +180,7 @@ export default function MenuPage() {
               <TableCell>Item</TableCell>
               <TableCell>Qty per learner</TableCell>
               <TableCell>Unit</TableCell>
+              <TableCell>One pack serves</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -186,6 +216,9 @@ export default function MenuPage() {
                       {units.map((unit) => <MenuItem key={unit} value={unit}>{unit}</MenuItem>)}
                     </TextField>
                   </TableCell>
+                  <TableCell>
+                    {portion ? <Serves item={item} qty={portion.qtyPerLearner} unit={portion.unit} /> : "Set the portion"}
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -194,4 +227,27 @@ export default function MenuPage() {
       </Paper>
     </>
   );
+}
+
+function Serves({
+  item,
+  qty,
+  unit,
+}: {
+  item: { unitSize: number; unitOfMeasure: PurchaseUom; contentsPerPack: number | null };
+  qty: number;
+  unit: PortionUnit;
+}) {
+  const contents = effectiveContentsPerPack({
+    portionUnit: unit,
+    purchaseUom: item.unitOfMeasure,
+    unitSize: item.unitSize,
+    quotedContents: null,
+    menuContents: item.contentsPerPack,
+    menuUnitSize: item.unitSize,
+    menuUom: item.unitOfMeasure,
+  });
+  const learners = learnersServedByPack(contents, qty);
+  if (learners == null) return <Typography color="error.main">Enter how many {unit} are in the pack</Typography>;
+  return <Typography>{formatNumber(learners, 2)} learners</Typography>;
 }

@@ -38,9 +38,25 @@ describe("order quantities", () => {
     assert.equal(salt.requiredQty, 5643);
     assert.equal(salt.packsToBuy, 11);
 
+    const fruit = line("fruit");
+    assert.equal(fruit.requiredQty, 1188);
+    assert.equal(fruit.contentsMissing, true);
+    assert.equal(fruit.packsToBuy, 0);
+
     const amasi = line("amasi");
     assert.equal(amasi.requiredQty, 237600);
     assert.ok(Math.abs(amasi.quantityInUnit - 237.6) < 1e-9);
+  });
+
+  it("counts one fruit per learner and divides by how many fruit are in a box", () => {
+    const state = seedState();
+    state.items = state.items.map((item) => (item.id === "fruit" ? { ...item, contentsPerPack: 50 } : item));
+    const fruit = buildLines(state, state.schools[0], 2026, 10).find((entry) => entry.itemId === "fruit");
+    assert.ok(fruit);
+    assert.equal(fruit.requiredQty, 1188);
+    assert.equal(fruit.contentsPerPack, 50);
+    assert.equal(fruit.learnersPerPack, 50);
+    assert.equal(fruit.packsToBuy, 24);
   });
 
   it("converts millilitres and grams into the purchase unit", () => {
@@ -59,6 +75,7 @@ describe("order quantities", () => {
         price: 100,
         unitSize: 10,
         unitOfMeasure: "kg" as const,
+        contentsPerPack: null,
         notes: "",
         capturedOn: "2026-10-02",
       },
@@ -69,6 +86,7 @@ describe("order quantities", () => {
         price: 60,
         unitSize: 5,
         unitOfMeasure: "kg" as const,
+        contentsPerPack: null,
         notes: "",
         capturedOn: "2026-10-02",
       },

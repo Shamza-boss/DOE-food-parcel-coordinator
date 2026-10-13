@@ -2,8 +2,10 @@ import { countWeekdays, monthSchoolDays } from "./calendar";
 import {
   coveredDayCounts,
   consumptionDayCount,
+  effectiveContentsPerPack,
+  learnersServedByPack,
   lineFoodCost,
-  packsToBuy,
+  packsFromContents,
   quantityInPurchaseUnit,
   requiredQuantity,
   resolvePrice,
@@ -29,7 +31,16 @@ export function buildLines(state: AppState, school: School, year: number, month:
     const unitSize = capture?.unitSize || item.unitSize;
     const unitOfMeasure = capture?.unitOfMeasure || item.unitOfMeasure;
     const quantity = quantityInPurchaseUnit(requiredQty, portion.unit, unitOfMeasure);
-    const packs = packsToBuy(quantity, unitSize);
+    const contentsPerPack = effectiveContentsPerPack({
+      portionUnit: portion.unit,
+      purchaseUom: unitOfMeasure,
+      unitSize,
+      quotedContents: capture?.contentsPerPack ?? null,
+      menuContents: item.contentsPerPack,
+      menuUnitSize: item.unitSize,
+      menuUom: item.unitOfMeasure,
+    });
+    const packs = packsFromContents(requiredQty, contentsPerPack);
     const supplier = capture ? state.suppliers.find((entry) => entry.id === capture.supplierId) : undefined;
     lines.push({
       itemId: item.id,
@@ -50,8 +61,11 @@ export function buildLines(state: AppState, school: School, year: number, month:
       totalDays,
       requiredQty,
       quantityInUnit: quantity,
-      packsToBuy: packs,
-      lineCost: lineFoodCost(packs, capture?.price ?? 0),
+      contentsPerPack,
+      learnersPerPack: learnersServedByPack(contentsPerPack, portion.qtyPerLearner),
+      contentsMissing: packs == null,
+      packsToBuy: packs ?? 0,
+      lineCost: lineFoodCost(packs ?? 0, capture?.price ?? 0),
     });
   }
 

@@ -18,6 +18,9 @@ function line(partial: Partial<OrderLineSnapshot> & Pick<OrderLineSnapshot, "ite
     totalDays: 1,
     requiredQty: 1,
     quantityInUnit: 1,
+    contentsPerPack: null,
+    learnersPerPack: null,
+    contentsMissing: false,
     lineCost: 0,
     ...partial,
   };

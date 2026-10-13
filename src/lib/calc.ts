@@ -25,6 +25,44 @@ export function packsToBuy(quantityInUnit: number, unitSize: number): number {
   return Math.round(quantityInUnit / unitSize);
 }
 
+/** Kilograms and litres already say what is inside the pack. A box does not. */
+export function derivedContentsPerPack(
+  portionUnit: PortionUnit,
+  purchaseUom: PurchaseUom,
+  unitSize: number,
+): number | null {
+  if (unitSize <= 0) return null;
+  if (portionUnit === "g" && purchaseUom === "kg") return unitSize * 1000;
+  if (portionUnit === "ml" && (purchaseUom === "L" || purchaseUom === "kg")) return unitSize * 1000;
+  return null;
+}
+
+export function effectiveContentsPerPack(input: {
+  portionUnit: PortionUnit;
+  purchaseUom: PurchaseUom;
+  unitSize: number;
+  quotedContents: number | null;
+  menuContents: number | null;
+  menuUnitSize: number;
+  menuUom: PurchaseUom;
+}): number | null {
+  if (input.quotedContents != null && input.quotedContents > 0) return input.quotedContents;
+  const samePack = input.unitSize === input.menuUnitSize && input.purchaseUom === input.menuUom;
+  if (samePack && input.menuContents != null && input.menuContents > 0) return input.menuContents;
+  return derivedContentsPerPack(input.portionUnit, input.purchaseUom, input.unitSize);
+}
+
+export function learnersServedByPack(contentsPerPack: number | null, qtyPerLearner: number): number | null {
+  if (contentsPerPack == null || qtyPerLearner <= 0) return null;
+  return contentsPerPack / qtyPerLearner;
+}
+
+export function packsFromContents(requiredQty: number, contentsPerPack: number | null): number | null {
+  if (requiredQty <= 0) return 0;
+  if (contentsPerPack == null || contentsPerPack <= 0) return null;
+  return Math.round(requiredQty / contentsPerPack);
+}
+
 export function pricePerBaseUnit(capture: Pick<PriceCapture, "price" | "unitSize">): number {
   if (capture.unitSize <= 0) return Number.POSITIVE_INFINITY;
   return capture.price / capture.unitSize;

@@ -59,6 +59,7 @@ interface StoreValue {
     price: number;
     unitSize: number;
     unitOfMeasure: PurchaseUom;
+    contentsPerPack: number | null;
     notes: string;
   }) => void;
   reuseSupplierPrices: (supplierId: string) => number;
@@ -86,6 +87,8 @@ function loadState(): AppState {
     return {
       ...seed,
       ...parsed,
+      items: parsed.items.map((item) => ({ ...item, contentsPerPack: item.contentsPerPack ?? null })),
+      prices: (parsed.prices ?? []).map((price) => ({ ...price, contentsPerPack: price.contentsPerPack ?? null })),
       settings: { ...seed.settings, ...parsed.settings },
       priceChoices: parsed.priceChoices ?? {},
     };

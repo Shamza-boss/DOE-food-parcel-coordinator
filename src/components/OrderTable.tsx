@@ -43,15 +43,25 @@ export default function OrderTable({ lines }: { lines: OrderLineSnapshot[] }) {
         </TableHead>
         <TableBody>
           {lines.map((line) => {
-            const bought = line.packsToBuy * line.unitSize;
-            const gap = line.quantityInUnit - bought;
+            const covered = line.contentsPerPack == null ? null : line.packsToBuy * line.contentsPerPack;
+            const gap = covered == null ? 0 : line.requiredQty - covered;
             return (
               <TableRow key={line.itemId} sx={{ bgcolor: line.perishable ? "rgba(142, 47, 47, 0.06)" : undefined }}>
                 <TableCell sx={{ position: "sticky", left: 0, bgcolor: "background.paper", fontWeight: 600 }}>
                   {line.itemName}
                   {line.perishable ? <Chip size="small" label="Fresh" sx={{ ml: 1 }} /> : null}
                 </TableCell>
-                <TableCell>{formatNumber(line.unitSize, 1)} {line.unitOfMeasure}</TableCell>
+                <TableCell>
+                  {formatNumber(line.unitSize, 1)} {line.unitOfMeasure}
+                  {line.contentsPerPack != null ? (
+                    <Typography variant="caption" display="block">
+                      {formatNumber(line.contentsPerPack, 2)} {line.portionUnit} inside
+                      {line.learnersPerPack != null ? ` · serves ${formatNumber(line.learnersPerPack, 2)} learners` : ""}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" color="error.main" display="block">Contents not set</Typography>
+                  )}
+                </TableCell>
                 <TableCell align="right">{formatZar(line.price)}</TableCell>
                 <TableCell>
                   {line.supplierName ?? "No price"}
@@ -67,10 +77,12 @@ export default function OrderTable({ lines }: { lines: OrderLineSnapshot[] }) {
                 <TableCell align="right">{formatNumber(line.requiredQty, 2)}</TableCell>
                 <TableCell align="right">{formatNumber(line.quantityInUnit, 4)}</TableCell>
                 <TableCell align="right">
-                  {line.packsToBuy}
-                  {Math.abs(gap) > 0.001 ? (
+                  {line.contentsMissing ? "—" : line.packsToBuy}
+                  {line.contentsMissing ? (
+                    <Typography variant="caption" display="block" color="error.main">Set pack contents</Typography>
+                  ) : Math.abs(gap) > 0.001 ? (
                     <Typography variant="caption" display="block" color={gap > 0 ? "error.main" : "text.secondary"}>
-                      {gap > 0 ? `${formatNumber(gap, 2)} short` : `${formatNumber(Math.abs(gap), 2)} spare`}
+                      {gap > 0 ? `${formatNumber(gap, 2)} ${line.portionUnit} short` : `${formatNumber(Math.abs(gap), 2)} ${line.portionUnit} spare`}
                     </Typography>
                   ) : null}
                 </TableCell>

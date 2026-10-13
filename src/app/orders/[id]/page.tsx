@@ -34,13 +34,18 @@ export default function OrderDetailPage() {
     <>
       <PageHeader
         title={`${order.snapshot?.schoolName ?? school?.name ?? "School"} · ${formatMonth(order.year, order.month)}`}
-        subtitle={`${typeName ?? "School type"} · ${order.snapshot?.learnerCount ?? school?.learnerCount ?? 0} learners. Required quantity is portion × learners × school days. Packs are that quantity converted to the purchase unit, then rounded to the nearest whole pack.`}
+        subtitle={`${typeName ?? "School type"} · ${order.snapshot?.learnerCount ?? school?.learnerCount ?? 0} learners. Required quantity is portion × learners × school days. One each is one piece per learner. Packs are that quantity divided by what is inside one pack, rounded to the nearest whole pack.`}
       />
       {order.status === "closed" ? (
         <Alert severity="success" sx={{ mb: 2 }}>This month is closed. Prices and the calendar will not change it.</Alert>
       ) : (
         <Alert severity="info" sx={{ mb: 2 }}>This order is open, so it still follows the school record, portions, and chosen prices.</Alert>
       )}
+      {lines.some((line) => line.contentsMissing) ? (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          {lines.filter((line) => line.contentsMissing).map((line) => line.itemName).join(", ")} cannot be turned into packs yet. Enter how many pieces are inside one pack. One each means one piece per learner, not one pack per learner.
+        </Alert>
+      ) : null}
       {lines.length === 0 ? (
         <Alert severity="warning" sx={{ mb: 2 }}>No portions are captured for this school type, so the sheet is empty.</Alert>
       ) : (
